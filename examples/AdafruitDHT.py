@@ -52,6 +52,10 @@ import time
 import sys
 import httplib, urllib
 import json
+import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(17,GPIO.OUT)
+GPIO.setup(24,GPIO.IN,pull_up_down=GPIO.PUD_UP)
 deviceId = "DJtkUfHE"
 deviceKey = "rESKaXdU8SqJDzkx"
 def post_to_mcs(payload):
@@ -64,23 +68,25 @@ def post_to_mcs(payload):
 			not_connected = 0
 		except (httplib.HTTPException, socket.error) as ex:
 			print "Error: %s" % ex
-			time.sleep(10)
+			time.sleep(5)
 			 # sleep 10 seconds
 	conn.request("POST", "/mcs/v2/devices/" + deviceId + "/datapoints", json.dumps(payload), headers)
 	response = conn.getresponse()
 	print( response.status, response.reason, json.dumps(payload), time.strftime("%c"))
 	data = response.read()
 	conn.close()
-
 while True:
-	humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
-	if humidity is not None and temperature is not None:
-		print('Temp={0:0.1f}*  Humidity={1:0.1f}%'.format(temperature, humidity))
-		payload = {"datapoints":[{"dataChnId":"Humidity","values":{"value":humidity}},{"dataChnId":"Temperature","values":{"value":temperature}}]} 
-		post_to_mcs(payload)
-		time.sleep(10)
-	else:
-		print('Failed to get reading. Try again!')
-		sys.exit(1)
-
-
+        SwitchStatus = GPIO.input(24)
+        if(SwitchStatus==0):
+                print('Button pressed')
+        else:
+                print('Button released')
+        humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
+        if humidity is not None and temperature is not None:
+                print('Temp={0:0.1f}*  Humidity={1:0.1f}%'.format(temperature, humidity))
+                payload = {"datapoints":[{"dataChnId":"Humidity","values":{"value":humidity}},{"dataChnId":"Temperature","values":{"value":temperature}},{"dataChnId":"SwitchStatus","values":{"value":SwitchStatus}}]}
+                post_to_mcs(payload)
+                time.sleep(10)
+        else:
+                print('Failed to get reading. Try again!')
+                sys.exit(1)
